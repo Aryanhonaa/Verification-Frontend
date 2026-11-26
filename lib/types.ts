@@ -640,9 +640,32 @@ export type AssessmentResult = {
    * Gate 1 = manual review and the assessor picked the occupation: only that
    * occupation was scored (gate1 stays manual_review).
    */
-  assessorSelected?: { anzscoCode: string; title: string; occupationId: string };
+  assessorSelected?: {
+    anzscoCode: string;
+    title: string;
+    occupationId: string;
+    source?: "assessor" | "user";
+  };
+  /** After scoring: 50% floor, closed-track Continue, specialisation Master's. */
+  workflowRouting?: {
+    kind: "ok" | "manual_review" | "manual_intervention";
+    code: "below_min_confidence" | "closed_track" | "specialisation_masters" | null;
+    message: string;
+    minConfidence: number;
+    highestConfidence: number;
+    allowRisk: boolean;
+  };
   /** Family rules on the suggested ANZSCOs (primary, alternatives, ET Maybe Suitable). */
   familyAdjustment?: FamilyAdjustment;
+  /** Degree-title field used to filter / penalise PE occupations (ET Plus Degree Logic). */
+  degreeField?: {
+    fieldId: string | null;
+    label: string | null;
+    sourceTitle: string;
+    matchedAnzsco: string | null;
+    matchedTitle: string | null;
+    penaltyApplies: boolean;
+  };
   /** Civil specialisation check (Structural / Geotechnical / Transport, doc 12). */
   specialisation?: SpecialisationResult | null;
   /** 312999 fallback (no rubric): suggested when no specific Associate ANZSCO reaches 70%. */
@@ -739,6 +762,7 @@ export type OccupationCheck = {
   /** False when Gate 1 did not open this occupation's track for the case. */
   trackOpen: boolean;
   gateResult: "open" | "manual_review" | "not_eligible";
+  continueRouting?: AssessmentResult["workflowRouting"];
 };
 
 export type ManualOccupationOption = {

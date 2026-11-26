@@ -783,11 +783,15 @@ export default function Home() {
    * manual-review case (null clears it) and scores it.
    */
   async function goToAssessmentStep(
-    opts: { rescore?: boolean; manualOccupation?: string | null } = {},
+    opts: {
+      rescore?: boolean;
+      manualOccupation?: string | null;
+      continueOccupation?: string | null;
+    } = {},
   ) {
     if (!caseId) {
       setSaveMsg("Case not ready");
-      return;
+      return null;
     }
     setWizardStep(4);
     setSaveMsg(null);
@@ -798,8 +802,10 @@ export default function Home() {
       setDirty(false);
       const result = await runAssessment(caseId, opts);
       setAssessment(result);
+      return result;
     } catch (err) {
       setAssessError(err instanceof Error ? err.message : String(err));
+      return null;
     } finally {
       setAssessLoading(false);
     }
@@ -997,6 +1003,16 @@ export default function Home() {
           onRetry={() => void goToAssessmentStep({ rescore: true })}
           onRunManualOccupation={(occupationId) =>
             void goToAssessmentStep({ manualOccupation: occupationId })
+          }
+          onContinueOccupation={(occupation) =>
+            void goToAssessmentStep({ continueOccupation: occupation }).then((result) => {
+              const locked = result?.candidates?.find(
+                (c) => c.anzscoCode === result.assessorSelected?.anzscoCode,
+              ) ?? result?.candidates?.[0];
+              if (locked && result?.workflowRouting?.allowRisk !== false) {
+                void goToRiskStep(locked);
+              }
+            })
           }
           onCheckOccupation={
             caseId ? (occupationId) => checkAssessOccupation(caseId, occupationId) : undefined

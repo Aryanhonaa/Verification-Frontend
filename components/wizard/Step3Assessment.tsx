@@ -628,10 +628,14 @@ function CheckResultCard({
   check,
   onClose,
   onShowPriorStudy,
+  onContinue,
+  continueBusy,
 }: {
   check: OccupationCheck;
   onClose: () => void;
   onShowPriorStudy?: () => void;
+  onContinue?: (occupation: string) => void;
+  continueBusy?: boolean;
 }) {
   const c = check.candidate;
   const conf = confidenceBadge(c.confidence);
@@ -682,7 +686,27 @@ function CheckResultCard({
       {!check.trackOpen ? (
         <p className="mt-3 rounded-lg bg-[var(--warning-soft)] px-3 py-2 text-sm text-[var(--warning-ink)]">
           Gate 1 didn&apos;t open the {check.trackLabel ?? "occupation's"} track for this case.
+          {onContinue
+            ? " Continue still locks this ANZSCO and sends the case to manual intervention."
+            : ""}
         </p>
+      ) : null}
+      {check.continueRouting?.kind && check.continueRouting.kind !== "ok" && check.trackOpen ? (
+        <p className="mt-3 rounded-lg bg-[var(--warning-soft)] px-3 py-2 text-sm text-[var(--warning-ink)]">
+          {check.continueRouting.message}
+        </p>
+      ) : null}
+      {onContinue ? (
+        <div className="mt-3 flex justify-end">
+          <button
+            type="button"
+            disabled={continueBusy}
+            onClick={() => onContinue(c.anzscoCode)}
+            className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-60"
+          >
+            {continueBusy ? "Continuing…" : "Continue with this ANZSCO"}
+          </button>
+        </div>
       ) : null}
       <CandidateMetrics c={c} className="mt-3 grid gap-x-5 gap-y-1 text-xs text-ink-muted sm:grid-cols-3" />
       {c.vocational ? null : (
@@ -712,10 +736,14 @@ function AnzscoCheck({
   onCheck,
   onEngineeringManager,
   onShowPriorStudy,
+  onContinue,
+  continueBusy,
 }: {
   onCheck: (occupationId: string) => Promise<OccupationCheck>;
   onEngineeringManager?: (answers?: EmAnswers) => Promise<EngineeringManagerResult>;
   onShowPriorStudy?: () => void;
+  onContinue?: (occupation: string) => void;
+  continueBusy?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<OccupationCheck | null>(null);
@@ -830,6 +858,15 @@ function AnzscoCheck({
                   <CheckResultCard
                     check={result}
                     onClose={clear}
+                    onContinue={
+                      onContinue
+                        ? (occupation) => {
+                            setOpen(false);
+                            onContinue(occupation);
+                          }
+                        : undefined
+                    }
+                    continueBusy={continueBusy}
                     onShowPriorStudy={
                       onShowPriorStudy
                         ? () => {
@@ -1144,6 +1181,7 @@ export function Step3Assessment({
   onRunManualOccupation,
   onCheckOccupation,
   onEngineeringManager,
+  onContinueOccupation,
 }: {
   assessment: AssessmentResult | null;
   loading: boolean;
@@ -1158,6 +1196,8 @@ export function Step3Assessment({
   onCheckOccupation?: (occupationId: string) => Promise<OccupationCheck>;
   /** Engineering Manager check in the Check an ANZSCO popup (answers saved on the case). */
   onEngineeringManager?: (answers?: EmAnswers) => Promise<EngineeringManagerResult>;
+  /** After a check: lock this ANZSCO (User-selected) and re-score. */
+  onContinueOccupation?: (occupation: string) => void;
 }) {
   const candidates = useMemo(
     () => (assessment ? candidatesFromAssessment(assessment) : []),
@@ -1255,6 +1295,8 @@ export function Step3Assessment({
       <AnzscoCheck
         onCheck={onCheckOccupation}
         onEngineeringManager={onEngineeringManager}
+        onContinue={onContinueOccupation}
+        continueBusy={loading}
         onShowPriorStudy={
           assessment.lateralEntry?.priorSubjects?.length ? showPriorStudy : undefined
         }
@@ -1386,6 +1428,23 @@ export function Step3Assessment({
 
       {assessment && !loading ? (
         <div className="space-y-4">
+          {assessment.workflowRouting && assessment.workflowRouting.kind !== "ok" ? (
+            <div
+              role="status"
+              className={`rounded-2xl px-4 py-3 text-sm leading-snug ${
+                assessment.workflowRouting.kind === "manual_intervention"
+                  ? "border border-line bg-[var(--warning-soft)] text-[var(--warning-ink)]"
+                  : "border border-line bg-surface-tint text-ink"
+              }`}
+            >
+              <p className="font-medium">
+                {assessment.workflowRouting.kind === "manual_intervention"
+                  ? "Manual intervention"
+                  : "Manual review"}
+              </p>
+              <p className="mt-1">{assessment.workflowRouting.message}</p>
+            </div>
+          ) : null}
           {anzscoCheck && (gateBlocked || !primaryCandidate) ? (
             <div className="flex justify-end">{anzscoCheck}</div>
           ) : null}
@@ -1546,7 +1605,9 @@ export function Step3Assessment({
                         </span>
                         {assessment.assessorSelected ? (
                           <span className="rounded-full bg-surface-tint px-2 py-0.5 text-[10px] font-medium text-ink-muted">
-                            Assessor-selected occupation
+                            {assessment.assessorSelected.source === "user"
+                              ? "User-selected"
+                              : "Assessor-selected occupation"}
                           </span>
                         ) : null}
                         {conf ? (
@@ -1835,19 +1896,25 @@ export function Step3Assessment({
                   </div>
                   <button
                     type="button"
+                    disabled={assessment.workflowRouting?.allowRisk === false}
                     onClick={() => {
+                      if (assessment.workflowRouting?.allowRisk === false) return;
                       setConfirmedCode(selected.anzscoCode);
                       onConfirmOccupation?.(selected);
                     }}
                     className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                      confirmedCode === selected.anzscoCode
-                        ? "bg-brand-dark text-white"
-                        : "bg-brand text-white shadow-[0_6px_16px_rgba(146,86,169,0.22)] hover:bg-brand-dark"
+                      assessment.workflowRouting?.allowRisk === false
+                        ? "cursor-not-allowed bg-surface-tint text-ink-muted"
+                        : confirmedCode === selected.anzscoCode
+                          ? "bg-brand-dark text-white"
+                          : "bg-brand text-white shadow-[0_6px_16px_rgba(146,86,169,0.22)] hover:bg-brand-dark"
                     }`}
                   >
-                    {confirmedCode === selected.anzscoCode
-                      ? "Continue to risk →"
-                      : "Select & continue to risk"}
+                    {assessment.workflowRouting?.allowRisk === false
+                      ? "Risk blocked — needs intervention"
+                      : confirmedCode === selected.anzscoCode
+                        ? "Continue to risk →"
+                        : "Select & continue to risk"}
                   </button>
                 </div>
 

@@ -252,12 +252,21 @@ export async function confirmCase(
  */
 export async function runAssessment(
   caseId: string,
-  opts?: { rescore?: boolean; manualOccupation?: string | null },
+  opts?: {
+    rescore?: boolean;
+    manualOccupation?: string | null;
+    continueOccupation?: string | null;
+  },
 ): Promise<import("./types").AssessmentResult> {
-  const body: { rescore: boolean; manualOccupation?: string | null } = {
+  const body: {
+    rescore: boolean;
+    manualOccupation?: string | null;
+    continueOccupation?: string | null;
+  } = {
     rescore: opts?.rescore ?? false,
   };
   if (opts?.manualOccupation !== undefined) body.manualOccupation = opts.manualOccupation;
+  if (opts?.continueOccupation !== undefined) body.continueOccupation = opts.continueOccupation;
   return api(`/cases/${caseId}/assess`, {
     method: "POST",
     body: JSON.stringify(body),
