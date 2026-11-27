@@ -1443,7 +1443,57 @@ export function Step3Assessment({
                   : "Manual review"}
               </p>
               <p className="mt-1">{assessment.workflowRouting.message}</p>
+              {assessment.workflowRouting.topScores?.length ? (
+                <ul className="mt-2 space-y-0.5">
+                  {assessment.workflowRouting.topScores.map((s) => (
+                    <li key={s.anzscoCode} className="font-mono text-xs tabular-nums">
+                      {s.title} · {s.anzscoCode} · {s.confidenceScore}%
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {assessment.workflowRouting.factors?.length ? (
+                <p className="mt-2 text-xs">Factors: {assessment.workflowRouting.factors.join(", ")}</p>
+              ) : null}
+              {assessment.workflowRouting.code === "specialisation_masters" ? (
+                <p className="mt-2 text-xs">
+                  {assessment.workflowRouting.masters?.length
+                    ? assessment.workflowRouting.masters
+                        .map((m) =>
+                          [m.title, m.field, m.institution].filter(Boolean).join(", ") || "Master's on file",
+                        )
+                        .join("; ")
+                    : "No Master's was found."}
+                </p>
+              ) : null}
+              {assessment.workflowRouting.closedTrack ? (
+                <p className="mt-2 text-xs">
+                  {assessment.workflowRouting.closedTrack.anzscoCode}
+                  {assessment.workflowRouting.closedTrack.trackLabel
+                    ? ` · ${assessment.workflowRouting.closedTrack.trackLabel}`
+                    : ""}
+                </p>
+              ) : null}
             </div>
+          ) : null}
+          {assessment.occupationSelectionHistory?.length ? (
+            <section
+              aria-label="Earlier ANZSCO choices"
+              className="rounded-2xl border border-line bg-card px-4 py-3 text-sm text-ink"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">
+                Earlier ANZSCO choices
+              </p>
+              <ul className="mt-2 space-y-1">
+                {assessment.occupationSelectionHistory.map((h) => (
+                  <li key={`${h.occupationId}-${h.replacedAt}`} className="text-xs leading-snug text-ink-muted">
+                    <span className="font-medium text-ink">{h.title}</span>
+                    <span className="font-mono"> · {h.anzscoCode}</span>
+                    {h.cleared ? " — Cleared" : h.reason ? ` — ${h.reason}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </section>
           ) : null}
           {anzscoCheck && (gateBlocked || !primaryCandidate) ? (
             <div className="flex justify-end">{anzscoCheck}</div>

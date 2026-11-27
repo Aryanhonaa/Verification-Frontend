@@ -1024,7 +1024,14 @@ export default function Home() {
               : undefined
           }
           onConfirmOccupation={(candidate: AnzscoCandidate) => {
-            void goToRiskStep(candidate);
+            void goToAssessmentStep({ continueOccupation: candidate.anzscoCode }).then((result) => {
+              if (!result || result.workflowRouting?.allowRisk === false) return;
+              const locked =
+                result.candidates?.find((c) => c.anzscoCode === result.assessorSelected?.anzscoCode) ??
+                result.candidates?.find((c) => c.anzscoCode === candidate.anzscoCode) ??
+                candidate;
+              void goToRiskStep(locked);
+            });
           }}
         />
       ) : wizardStep === 3 ? (
