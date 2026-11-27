@@ -34,6 +34,7 @@ function TierPill({ tier }: { tier: SpecialisationTier }) {
 }
 
 function pathwaySummary(s: SpecialisationOutcome): string {
+  if (s.mastersRequired && !s.mastersRequired.ok) return "Master's in the same field is required";
   if (!s.chosen) return "Not evaluated — Civil core incomplete";
   const a = s.pathwayA.available ? `Master's ${Math.round(s.pathwayA.relevancePct)}%` : "No Master's";
   const b = s.pathwayB.available

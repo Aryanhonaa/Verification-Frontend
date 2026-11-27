@@ -33,6 +33,20 @@ export function QualificationEvidenceBox({
           <span className={`${PILL} ${eng.className}`}>{eng.label}</span>
           <p className="mt-1.5 text-[12px] leading-snug text-ink-muted">{engineering.reason}</p>
         </dd>
+        {evidence.completionYearMissing || evidence.completionYear ? (
+          <>
+            <dt className="text-[12px] font-medium text-ink-faint sm:pt-0.5">Qualification year</dt>
+            <dd className="min-w-0">
+              {evidence.completionYearMissing ? (
+                <p className="text-[12px] leading-snug text-[var(--warning-ink)]">
+                  Qualification year not found
+                </p>
+              ) : (
+                <span className="leading-snug text-ink">{evidence.completionYear}</span>
+              )}
+            </dd>
+          </>
+        ) : null}
         {hasLateralEntryStatus(lateralEntry) ? (
           <>
             <dt className="text-[12px] font-medium text-ink-faint sm:pt-0.5">Lateral entry</dt>

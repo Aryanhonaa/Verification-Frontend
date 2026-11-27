@@ -417,6 +417,8 @@ export type QualificationEvidence = {
   duration: DurationEvidence[];
   engineering: EngineeringDecision;
   finalProject: FinalProjectEvidence | null;
+  completionYear?: number | null;
+  completionYearMissing?: boolean;
 };
 
 export type AnzscoCandidate = {
@@ -654,9 +656,27 @@ export type AssessmentResult = {
     minConfidence: number;
     highestConfidence: number;
     allowRisk: boolean;
+    topScores?: Array<{ anzscoCode: string; title: string; confidenceScore: number }>;
+    factors?: string[];
+    masters?: Array<{ title: string | null; field: string | null; institution: string | null }>;
+    closedTrack?: { anzscoCode: string; track: string | null; trackLabel: string | null };
   };
+  /** Earlier Continue / assessor picks, newest last. */
+  occupationSelectionHistory?: Array<{
+    anzscoCode: string;
+    title: string;
+    occupationId: string;
+    source: "assessor" | "user";
+    reason: string | null;
+    cleared?: boolean;
+    replacedAt: string;
+  }>;
   /** Family rules on the suggested ANZSCOs (primary, alternatives, ET Maybe Suitable). */
   familyAdjustment?: FamilyAdjustment;
+  /** Completion year used for the academic-alignment year multiplier. */
+  qualificationYear?: number | null;
+  /** True when no readable qualification completion year was found. */
+  qualificationYearMissing?: boolean;
   /** Degree-title field used to filter / penalise PE occupations (ET Plus Degree Logic). */
   degreeField?: {
     fieldId: string | null;
@@ -851,6 +871,7 @@ export type Qualification = {
   degreeTitle: string | null;
   institution: string | null;
   country: string | null;
+  completionYear?: number | null;
 };
 
 export const UNCERTAIN_THRESHOLD = 0.7;
@@ -1130,6 +1151,8 @@ export type SpecialisationOutcome = {
   tier: SpecialisationTier;
   gaps: string[];
   routing: string;
+  /** Master's in an accepted field is required. Absent on older results. */
+  mastersRequired?: { ok: boolean; message: string };
 };
 export type SpecialisationResult = {
   version: string;
