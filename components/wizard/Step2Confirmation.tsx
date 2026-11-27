@@ -18,6 +18,7 @@ import type { DegreeLevel } from "@/lib/types";
 import { BTN_PRIMARY, BTN_SECONDARY, FOCUS_RING, Spinner } from "./UploadTile";
 import { DurationStatusPill, formatCountedDuration, formatYears } from "./transcriptUi";
 import { LateralEntrySection } from "./LateralEntryCard";
+import { engineeringCheckboxChecked } from "@/lib/engineeringTitle";
 
 /** Correction from the study duration row; undefined = unchanged, null = clear. */
 export type DurationCorrection = {
@@ -69,6 +70,9 @@ export function Step2Confirmation({
   onNext: () => void;
   nextBusy?: boolean;
 }) {
+  const engineeringTitleSuggested = (transcriptData?.qualifications ?? []).some(
+    (q) => q.titleNamesEngineering,
+  );
   const blocks: ConfirmationQualification[] = buildConfirmationQualifications(
     selectedLevels,
     qualifications,
@@ -250,14 +254,17 @@ export function Step2Confirmation({
           Engineering-titled degree
         </h3>
         <p className="mt-1 text-xs leading-relaxed text-ink-muted">
-          Separate from the per-role engineering checkboxes above. Answer for the
-          case overall — not set by AI.
+          Separate from the per-role engineering checkboxes above. Pre-ticked when
+          the qualification title names engineering. You can change it.
         </p>
         <label className="mt-4 flex cursor-pointer items-start gap-3">
           <input
             type="checkbox"
             className="mt-1 h-4 w-4 accent-brand"
-            checked={engineeringTitledDegree === true}
+            checked={engineeringCheckboxChecked(
+              engineeringTitledDegree,
+              engineeringTitleSuggested,
+            )}
             onChange={(e) => onEngineeringTitledChange(e.target.checked)}
           />
           <span className="text-sm font-medium text-ink">

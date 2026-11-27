@@ -87,6 +87,7 @@ export function UploadTile({
   busy,
   busyLabel = "Uploading…",
   compact,
+  multiple,
   onFiles,
 }: {
   label: string;
@@ -97,7 +98,9 @@ export function UploadTile({
   busyLabel?: string;
   /** Smaller "add another" variant once files exist. */
   compact?: boolean;
-  onFiles: (files: FileList | null) => void;
+  /** Transcript and certificate slots take every file in one selection. */
+  multiple?: boolean;
+  onFiles: (files: File[]) => void;
 }) {
   const id = useId();
   const [over, setOver] = useState(false);
@@ -116,7 +119,8 @@ export function UploadTile({
         e.preventDefault();
         setOver(false);
         if (off) return;
-        onFiles(e.dataTransfer.files);
+        const picked = Array.from(e.dataTransfer.files);
+        if (picked.length) onFiles(multiple ? picked : picked.slice(0, 1));
       }}
       className={`group flex items-center gap-3 rounded-xl border border-dashed px-3.5 transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-ring ${
         compact ? "py-2" : "min-h-[64px] py-3"
@@ -132,12 +136,14 @@ export function UploadTile({
         id={id}
         type="file"
         accept={accept}
+        multiple={multiple}
         disabled={off}
         aria-label={`Upload ${label}`}
         className="sr-only"
         onChange={(e) => {
-          onFiles(e.target.files);
+          const picked = e.target.files ? Array.from(e.target.files) : [];
           e.target.value = "";
+          if (picked.length) onFiles(multiple ? picked : picked.slice(0, 1));
         }}
       />
       <span

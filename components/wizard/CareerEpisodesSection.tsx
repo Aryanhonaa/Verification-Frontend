@@ -269,8 +269,8 @@ export function CareerEpisodesSection({
     ]);
   }
 
-  async function uploadPending(entry: PendingEntry, files: FileList | null) {
-    const file = files?.[0];
+  async function uploadPending(entry: PendingEntry, files: File[]) {
+    const file = files[0];
     if (!file || !caseId) return;
     setError(null);
     if (file.size > MAX_BYTES) {

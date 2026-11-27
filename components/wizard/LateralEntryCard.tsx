@@ -254,8 +254,8 @@ export function LateralEntrySection({
   const answer = (question: "answer" | "confirm", v: Answer) =>
     run("answer", () => answerLateralEntry(caseId, question, v));
 
-  const upload = (files: FileList | null) => {
-    const file = files?.[0];
+  const upload = (files: File[]) => {
+    const file = files[0];
     if (!file) return;
     readFor.current = null;
     void run("upload", async () => {

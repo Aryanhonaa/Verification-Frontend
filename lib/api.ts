@@ -56,6 +56,16 @@ export function clearStoredCaseId(): void {
   localStorage.removeItem(CASE_KEY);
 }
 
+/** Prefer the server's specific message over Fastify's generic "Internal Server Error". */
+export function apiErrorMessage(data: unknown, status: number): string {
+  if (!data || typeof data !== "object") return `Request failed (${status})`;
+  const row = data as { error?: unknown; message?: unknown };
+  const error = typeof row.error === "string" ? row.error.trim() : "";
+  const message = typeof row.message === "string" ? row.message.trim() : "";
+  const specific = [message, error].find((value) => value && value !== "Internal Server Error");
+  return specific || error || message || `Request failed (${status})`;
+}
+
 async function api<T>(
   path: string,
   init: RequestInit = {},
@@ -68,9 +78,7 @@ async function api<T>(
   const res = await fetch(`${API_URL}${path}`, { ...init, headers });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const message =
-      (data as { error?: string }).error ?? `Request failed (${res.status})`;
-    throw new Error(message);
+    throw new Error(apiErrorMessage(data, res.status));
   }
   return data as T;
 }

@@ -23,6 +23,7 @@ import {
   startRead,
   uploadDocument,
 } from "@/lib/api";
+import { partitionUploads } from "@/lib/uploadBatch";
 import {
   AWARD_LEVEL_FIELD,
   AWARD_LEVEL_OPTIONS,
@@ -433,35 +434,39 @@ export default function Home() {
   }, [caseId, dirty, draftBody]);
 
   async function onUpload(
-    fileList: FileList | null,
+    fileList: File[] | null,
     type: DocumentType,
     degreeLevel?: DegreeLevel | null,
   ) {
-    if (!fileList?.length || !caseId) return;
-    setUploadError(null);
-    const file = fileList[0]!;
-    if (file.size > MAX_BYTES) {
-      setUploadError("File exceeds the 10 MB size limit");
-      return;
-    }
-    const okExt = /\.(pdf|png|jpe?g|docx)$/i.test(file.name);
-    if (!okExt) {
-      setUploadError("Accepted formats: PDF, PNG, JPG, DOCX");
-      return;
-    }
+    const selected = type === "CV" ? (fileList ?? []).slice(0, 1) : (fileList ?? []);
+    if (!selected.length || !caseId) return;
     if (type !== "CV" && !degreeLevel) {
       setUploadError("Select a degree type before uploading transcript/certificate");
       return;
     }
+    const { accepted, errors } = partitionUploads(selected, MAX_BYTES);
     const key = type === "CV" ? "CV" : `${type}:${degreeLevel}`;
     setUploadingKey(key);
+    setUploadError(null);
     try {
-      await uploadDocument(caseId, type, file, type === "CV" ? null : degreeLevel);
+      for (const file of accepted) {
+        try {
+          await uploadDocument(
+            caseId,
+            type,
+            file,
+            type === "CV" ? null : degreeLevel,
+          );
+        } catch (err) {
+          errors.push(`${file.name}: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
       await refreshCase();
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : String(err));
+      errors.push(err instanceof Error ? err.message : String(err));
     } finally {
       setUploadingKey(null);
+      if (errors.length) setUploadError(errors.join("; "));
     }
   }
 
@@ -1492,7 +1497,7 @@ function LevelDocsSection({
   documents: CaseDocument[];
   uploadingKey: string | null;
   disabled: boolean;
-  onUpload: (type: "TRANSCRIPT" | "CERTIFICATE", files: FileList | null) => void;
+  onUpload: (type: "TRANSCRIPT" | "CERTIFICATE", files: File[]) => void;
   onDelete: (docId: string) => void;
 }) {
   const label = DEGREE_LEVEL_LABELS[degreeLevel];
@@ -1550,7 +1555,7 @@ function DocUploadBlock({
   docs: CaseDocument[];
   uploading: boolean;
   disabled: boolean;
-  onUpload: (files: FileList | null) => void;
+  onUpload: (files: File[]) => void;
   onDelete: (docId: string) => void;
 }) {
   return (
@@ -1582,6 +1587,7 @@ function DocUploadBlock({
           compact={docs.length > 0}
           busy={uploading}
           disabled={disabled}
+          multiple={title !== "CV"}
           onFiles={onUpload}
         />
       </div>

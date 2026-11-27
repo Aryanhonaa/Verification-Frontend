@@ -1008,6 +1008,8 @@ export type QualificationTranscriptSummary = {
   degreeLevel: DegreeLevel;
   title: string | null;
   fieldOfStudy: string | null;
+  /** Same rule as the assessment line "title names engineering". */
+  titleNamesEngineering?: boolean;
   award: AwardLevel;
   awardLabel: string;
   aqfLevel: number | null;
